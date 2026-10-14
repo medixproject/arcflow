@@ -1,0 +1,54 @@
+/.env
+/vendor/
+/node_modules/
+/public/build/
+/storage/*.key
+/storage/logs/*.log
+.phpunit.result.cache
+.php-cs-fixer.cache
+.DS_Store
+
+# Environment files: commit only the safe example template
+.env.*
+!.env.example
+
+# Runtime state, sessions, cache and logs
+/storage/framework/cache/
+/storage/framework/sessions/
+/storage/framework/views/
+/storage/logs/
+/bootstrap/cache/*.php
+
+# Local databases, dumps, backups and archives
+*.sqlite
+*.sqlite3
+*.sql
+*.sql.gz
+*.dump
+*.bak
+*.backup
+*.tar
+*.tar.gz
+*.zip
+
+# Private keys, certificates and credentials
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+/secrets/
+/credentials/
+
+# Editor and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local configuration backups
+*.bak-*
+
+# Local configuration backups
+*.bak-*

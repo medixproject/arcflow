@@ -1,0 +1,105 @@
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: arcflow-app
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    # Migrations are an explicit release step (see DEPLOY.md); startup must not mutate the database.
+    command: php-fpm
+    restart: unless-stopped
+    networks:
+      - arcflow-internal
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: arcflow-nginx
+    depends_on:
+      - app
+    ports:
+      - "${ARCFLOW_HTTP_BIND:-127.0.0.1:4173}:80"
+    volumes:
+      - ./public:/var/www/html/public:ro
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    networks:
+      - arcflow-internal
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: arcflow-worker
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: php artisan queue:work --sleep=1 --tries=3
+    restart: unless-stopped
+    networks:
+      - arcflow-internal
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: arcflow-scheduler
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: php artisan schedule:work
+    restart: unless-stopped
+    networks:
+      - arcflow-internal
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: arcflow-postgres
+    environment:
+      POSTGRES_DB: arcflow
+      POSTGRES_USER: arcflow
+      # Accepts the new name or the legacy spelling used by the existing live .env.
+      # (Only used when the data volume is first created; it does not change an existing DB password.)
+      POSTGRES_PASSWORD: ${ARCFLOW_POSTGRES_PASSWORD:-${ARCflow_POSTGRES_PASSWORD:?Set ARCFLOW_POSTGRES_PASSWORD in .env}}
+    volumes:
+      - arcflow-pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arcflow -d arcflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - arcflow-internal
+
+  redis:
+    image: redis:7-alpine
+    container_name: arcflow-redis
+    restart: unless-stopped
+    networks:
+      - arcflow-internal
+
+volumes:
+  arcflow-pgdata:
+    # MUST stay identical to the live stack so the existing database is reused.
+    name: arcflow-pgdata
+
+networks:
+  arcflow-internal:
+    name: arcflow-internal
+    driver: bridge
+    internal: false

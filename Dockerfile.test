@@ -1,0 +1,20 @@
+FROM php:8.3-cli-bookworm
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       git unzip libpq-dev libzip-dev libgmp-dev \
+       libsqlite3-dev libxml2-dev libonig-dev \
+    && docker-php-ext-install \
+       pdo_pgsql pdo_sqlite pcntl zip bcmath gmp mbstring dom xml xmlwriter \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+COPY . .
+
+RUN composer config --global allow-plugins.pestphp/pest-plugin true && composer install --prefer-dist --no-interaction --no-progress
+
+CMD ["php", "artisan", "test"]

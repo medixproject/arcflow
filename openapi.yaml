@@ -1,0 +1,71 @@
+openapi: 3.1.0
+info:
+  title: ArcFlow API
+  version: 0.2.0
+  description: Non-custodial USDC invoice and payment reconciliation API for Arc.
+servers:
+  - url: https://example.invalid
+security:
+  - bearerAuth: []
+paths:
+  /api/health:
+    get:
+      security: []
+      responses:
+        '200': {description: Health status}
+  /api/v1/invoices:
+    get:
+      responses:
+        '200': {description: Invoice list}
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInvoice'
+      responses:
+        '201': {description: Invoice created}
+        '401': {description: Unauthorized}
+  /api/v1/invoices/{id}:
+    get:
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Invoice}
+        '404': {description: Not found}
+  /api/v1/invoices/{id}/cancel:
+    post:
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Cancelled}
+  /api/v1/payments/{id}:
+    get:
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Payment}
+  /api/v1/reviews/late-transfers:
+    get:
+      summary: Read-only list of transfers needing manual review (late or legacy-address)
+      responses:
+        '200': {description: Review lists, max 100 per type}
+        '401': {description: Unauthorized}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    CreateInvoice:
+      type: object
+      required: [amount, currency]
+      description: payment_address is required for merchants without an xpub config, and prohibited for merchants with one (address is derived server-side).
+      properties:
+        amount: {type: string, example: '25.00', pattern: '^\d{1,24}(\.\d{1,6})?$'}
+        currency: {type: string, enum: [USDC]}
+        description: {type: string}
+        external_id: {type: string}
+        expires_in_minutes: {type: integer, minimum: 1, maximum: 10080}
+        payment_address: {type: string, pattern: '^0x[a-fA-F0-9]{40}$'}
